@@ -1,0 +1,230 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:focused_menu/focused_menu.dart';
+import 'package:focused_menu/modals.dart';
+import 'package:image_cropper/image_cropper.dart';
+import '../Utilities/Classes.dart';
+import '../Utilities/database_helper.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../Utilities/constants.dart';
+import '../screens/view_document.dart';
+
+class ImageCard extends StatefulWidget {
+  final Function fileEditCallback;
+  final DirectoryOS directoryOS;
+  final ImageOS imageOS;
+  final Function selectCallback;
+  final Function imageViewerCallback;
+
+  const ImageCard({
+    required this.fileEditCallback,
+    required this.directoryOS,
+    required this.imageOS,
+    required this.selectCallback,
+    required this.imageViewerCallback,
+  });
+
+  @override
+  _ImageCardState createState() => _ImageCardState();
+}
+
+class _ImageCardState extends State<ImageCard> {
+  DatabaseHelper database = DatabaseHelper();
+
+  selectionOnPressed() {
+    setState(() {
+      selectedImageIndex[widget.imageOS.idx - 1] = true;
+    });
+    widget.selectCallback();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+    return Stack(
+      children: [
+        MaterialButton(
+          elevation: 20,
+          //color: Color,
+          onPressed: () {
+            (enableSelect)
+                ? selectionOnPressed()
+                : widget.imageViewerCallback();
+          },
+          child: FocusedMenuHolder(
+              menuWidth: size.width * 0.47,
+              onPressed: () {
+                (enableSelect)
+                    ? selectionOnPressed()
+                    : widget.imageViewerCallback();
+              },
+              menuItems: [
+                FocusedMenuItem(
+                  title: const Text(
+                    'Crop',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  onPressed: () async {
+                    final CroppedFile? croppedFile =
+                        await ImageCropper().cropImage(
+                      sourcePath: widget.imageOS.imgPath,
+                      compressQuality: 90,
+                      uiSettings: [
+                        AndroidUiSettings(
+                          toolbarTitle: 'Crop Image',
+                          toolbarColor: Colors.black,
+                          toolbarWidgetColor: Colors.white,
+                          lockAspectRatio: false,
+                        ),
+                        IOSUiSettings(
+                          title: 'Crop Image',
+                        ),
+                      ],
+                    );
+
+                    if (croppedFile != null) {
+                      File image = File(croppedFile.path);
+                      File temp = File(
+                        widget.imageOS.imgPath.substring(
+                              0,
+                              widget.imageOS.imgPath.lastIndexOf("."),
+                            ) +
+                            "c.jpg",
+                      );
+
+                      File(widget.imageOS.imgPath).deleteSync();
+                      image.copySync(temp.path);
+                      widget.imageOS.imgPath = temp.path;
+
+                      database.updateImagePath(
+                        tableName: widget.directoryOS.dirName!,
+                        image: widget.imageOS,
+                      );
+
+                      if (widget.imageOS.idx == 1) {
+                        database.updateFirstImagePath(
+                          imagePath: widget.imageOS.imgPath,
+                          dirPath: widget.directoryOS.dirPath!,
+                        );
+                      }
+
+                      widget.fileEditCallback();
+                    }
+                  },
+                  trailingIcon: const Icon(
+                    Icons.crop,
+                    color: Colors.black,
+                  ),
+                ),
+                FocusedMenuItem(
+                  title: Text('Delete'),
+                  trailingIcon: Icon(Icons.delete),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(10),
+                            ),
+                          ),
+                          title: Text('Delete'),
+                          content: Text('Do you really want to delete image?'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                'Cancel',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                File(widget.imageOS.imgPath).deleteSync();
+                                database.deleteImage(
+                                  imgPath: widget.imageOS.imgPath,
+                                  tableName: widget.directoryOS.dirName!,
+                                );
+                                database.updateImageCount(
+                                  tableName: widget.directoryOS.dirName!,
+                                );
+                                try {
+                                  Directory(widget.directoryOS.dirPath!)
+                                      .deleteSync(recursive: false);
+                                  database.deleteDirectory(
+                                      dirPath: widget.directoryOS.dirPath!);
+                                  Navigator.pop(context);
+                                } catch (e) {
+                                  widget.fileEditCallback();
+                                }
+                                widget.selectCallback();
+                                Navigator.pop(context);
+                              },
+                              child: Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.redAccent),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  backgroundColor: Colors.redAccent,
+                ),
+              ],
+              child: Container(
+                height: size.height * 0.25,
+                width: size.width * 0.40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.grey[200], // optional background
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: Image.file(
+                  File(widget.imageOS.imgPath),
+                  fit: BoxFit.cover,
+                ),
+              )),
+        ),
+        (selectedImageIndex[widget.imageOS.idx - 1] && enableSelect)
+            ? Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedImageIndex[widget.imageOS.idx - 1] = false;
+                    });
+                    widget.selectCallback();
+                  },
+                  child: Container(
+                    foregroundDecoration: BoxDecoration(
+                      border: Border.all(
+                        width: 2,
+                        color: primaryColor,
+                      ),
+                    ),
+                    color: primaryColor.withOpacity(0.3),
+                  ),
+                ),
+              )
+            : Container(
+                width: 0.001,
+                height: 0.001,
+              ),
+        (enableReorder)
+            ? Positioned.fill(
+                child: Container(
+                  color: Colors.transparent,
+                ),
+              )
+            : Container(
+                width: 0.001,
+                height: 0.001,
+              ),
+      ],
+    );
+  }
+}

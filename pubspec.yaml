@@ -1,0 +1,53 @@
+name: docum
+description: A free app which convert your jpeg/jpg files to pdf and generate a downloadable and shareable pdf file.
+
+publish_to: "none"
+
+version: 1.0.0
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.6
+  flutter_speed_dial: ^7.0.0
+  focused_menu: ^1.0.5
+  image_picker: ^1.1.2
+  open_filex: ^4.4.0   # stable version without Registrar error
+  path_provider: ^2.1.4
+  pdf: ^3.11.1
+  permission_handler: ^11.3.1
+  quick_actions: ^1.0.6
+  reorderables: ^0.6.0
+  #share_extend: ^2.0.0
+  share_plus: ^10.0.2
+  shared_preferences: ^2.3.2
+  simple_animated_icon: ^1.0.0
+  sqflite: ^2.3.3
+  url_launcher: ^6.3.1
+  flutter_image_compress: ^2.3.0
+  path: ^1.9.0
+  flutter_gen: ^5.7.0
+  vector_math: ^2.1.4
+  image_cropper: ^9.1.0
+  flutter_launcher_icons: ^0.14.4
+  syncfusion_flutter_pdfviewer: ^31.1.19
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/icon/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
